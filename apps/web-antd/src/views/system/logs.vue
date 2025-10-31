@@ -418,21 +418,21 @@ onMounted(() => {
 
         <div class="mt-4">
           <h4 class="mb-2 font-semibold">User Agent</h4>
-          <div class="rounded bg-gray-50 p-2 text-sm">
+          <div class="rounded p-2 text-sm">
             {{ currentRecord.user_agent }}
           </div>
         </div>
 
         <div v-if="currentRecord.request_body" class="mt-4">
           <h4 class="mb-2 font-semibold">请求内容</h4>
-          <pre class="max-h-40 overflow-auto rounded bg-gray-50 p-3 text-xs">{{
+          <pre class="max-h-40 overflow-auto rounded p-3 text-xs">{{
             formatJson(currentRecord.request_body)
           }}</pre>
         </div>
 
         <div v-if="currentRecord.response_body" class="mt-4">
           <h4 class="mb-2 font-semibold">响应内容</h4>
-          <pre class="max-h-40 overflow-auto rounded bg-gray-50 p-3 text-xs">{{
+          <pre class="max-h-40 overflow-auto rounded p-3 text-xs">{{
             formatJson(currentRecord.response_body)
           }}</pre>
         </div>
@@ -440,7 +440,7 @@ onMounted(() => {
         <div v-if="currentRecord.error_message" class="mt-4">
           <h4 class="mb-2 font-semibold text-red-600">错误信息</h4>
           <div
-            class="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+            class="rounded border border-red-200 p-3 text-sm text-red-800"
           >
             {{ currentRecord.error_message }}
           </div>
