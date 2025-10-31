@@ -6,32 +6,54 @@ import type {
   ShortLinkStatistics,
 } from '#/api';
 
-import { onMounted, reactive, ref } from 'vue';
+import { nextTick, onMounted, reactive, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 import { Copy, Search } from '@vben/icons';
+import { useStorage } from '@vueuse/core';
 
 import {
   Button,
   Card,
   DatePicker,
+  Divider,
   Form,
   FormItem,
   Input,
+  InputNumber,
   message,
   Modal,
   Popconfirm,
   Select,
   SelectOption,
+  Slider,
   Space,
   Switch,
   Table,
   Textarea,
   Tooltip,
+  Upload,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
+import { qrcanvas } from 'qrcanvas';
 
 import { DomainApi, ShortLinkApi } from '#/api';
+
+// 二维码配置接口
+interface QRCodeConfig {
+  size: number;
+  colorDark: string;
+  colorLight: string;
+  correctLevel: 'L' | 'M' | 'Q' | 'H';
+  // 高级配置
+  useGradient: boolean;
+  gradientStartColor: string;
+  gradientEndColor: string;
+  gradientDirection: 'horizontal' | 'vertical' | 'diagonal';
+  dotScale: number;
+  logoImage: string | null;
+  backgroundImage: string | null;
+}
 
 // 响应式数据
 const loading = ref(false);
@@ -45,6 +67,31 @@ const isEdit = ref(false);
 const currentRecord = ref<null | ShortLink>(null);
 const currentStats = ref<null | ShortLinkStatistics>(null);
 const formRef = ref();
+
+// 二维码相关状态
+const qrModalVisible = ref(false);
+const currentQRUrl = ref('');
+const qrCanvasRef = ref<HTMLCanvasElement | null>(null);
+
+// 默认二维码配置
+const defaultQRConfig: QRCodeConfig = {
+  size: 400,
+  colorDark: '#000000',
+  colorLight: '#ffffff',
+  correctLevel: 'M',
+  useGradient: false,
+  gradientStartColor: '#000000',
+  gradientEndColor: '#0066ff',
+  gradientDirection: 'diagonal',
+  dotScale: 1.0,
+  logoImage: null,
+  backgroundImage: null,
+};
+
+// 使用 useStorage 保存配置到 localStorage
+const qrConfig = useStorage<QRCodeConfig>('shortlink-qr-config', {
+  ...defaultQRConfig,
+});
 
 // 搜索参数
 const searchParams = reactive({
@@ -384,6 +431,218 @@ const formatDate = (dateString: string) => {
   return dayjs(dateString).format('YYYY-MM-DD HH:mm');
 };
 
+// 二维码相关方法
+const handleShowQRCode = (record: ShortLink) => {
+  currentQRUrl.value = record.short_url;
+  qrModalVisible.value = true;
+  // 使用 nextTick 确保 DOM 已更新
+  nextTick(() => {
+    generateQRCode();
+  });
+};
+
+const generateQRCode = () => {
+  if (!qrCanvasRef.value || !currentQRUrl.value) return;
+
+  const canvas = qrCanvasRef.value;
+  const config = qrConfig.value;
+
+  try {
+    // 基础配置
+    const options: any = {
+      data: currentQRUrl.value,
+      size: config.size,
+      correctLevel: config.correctLevel,
+    };
+
+    // 如果启用渐变色
+    if (config.useGradient) {
+      options.foreground = createGradient(
+        config.gradientStartColor,
+        config.gradientEndColor,
+        config.gradientDirection,
+        config.size,
+      );
+    } else {
+      options.foreground = config.colorDark;
+    }
+
+    options.background = config.colorLight;
+
+    // 点缩放
+    if (config.dotScale !== 1.0) {
+      options.cellSize = config.dotScale;
+    }
+
+    // 生成二维码
+    qrcanvas(options, canvas);
+
+    // 如果有 logo 或背景图片，需要在生成后处理
+    if (config.logoImage || config.backgroundImage) {
+      addImagesToQRCode(canvas, config);
+    }
+  } catch (error) {
+    console.error('生成二维码失败:', error);
+    message.error('生成二维码失败');
+  }
+};
+
+// 创建渐变色
+const createGradient = (
+  startColor: string,
+  endColor: string,
+  direction: string,
+  size: number,
+): CanvasGradient | string => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return startColor;
+
+  let gradient: CanvasGradient;
+
+  switch (direction) {
+    case 'horizontal':
+      gradient = ctx.createLinearGradient(0, 0, size, 0);
+      break;
+    case 'vertical':
+      gradient = ctx.createLinearGradient(0, 0, 0, size);
+      break;
+    case 'diagonal':
+    default:
+      gradient = ctx.createLinearGradient(0, 0, size, size);
+      break;
+  }
+
+  gradient.addColorStop(0, startColor);
+  gradient.addColorStop(1, endColor);
+
+  return gradient;
+};
+
+// 在二维码上添加图片（logo 或背景）
+const addImagesToQRCode = async (
+  canvas: HTMLCanvasElement,
+  config: QRCodeConfig,
+) => {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  // 添加背景图片
+  if (config.backgroundImage) {
+    try {
+      const bgImg = new Image();
+      bgImg.src = config.backgroundImage;
+      await new Promise((resolve, reject) => {
+        bgImg.onload = resolve;
+        bgImg.onerror = reject;
+      });
+      ctx.globalAlpha = 0.1;
+      ctx.drawImage(bgImg, 0, 0, config.size, config.size);
+      ctx.globalAlpha = 1.0;
+    } catch (error) {
+      console.error('加载背景图片失败:', error);
+    }
+  }
+
+  // 添加 logo
+  if (config.logoImage) {
+    try {
+      const logoImg = new Image();
+      logoImg.src = config.logoImage;
+      await new Promise((resolve, reject) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
+      });
+
+      // Logo 大小约为二维码的 20%
+      const logoSize = config.size * 0.2;
+      const logoX = (config.size - logoSize) / 2;
+      const logoY = (config.size - logoSize) / 2;
+
+      // 绘制白色背景
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(logoX - 5, logoY - 5, logoSize + 10, logoSize + 10);
+
+      // 绘制 logo
+      ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+    } catch (error) {
+      console.error('加载 Logo 失败:', error);
+    }
+  }
+};
+
+// 监听配置变化，自动重新生成二维码
+watch(
+  () => qrConfig.value,
+  () => {
+    if (qrModalVisible.value) {
+      generateQRCode();
+    }
+  },
+  { deep: true },
+);
+
+// 下载二维码
+const handleDownloadQR = () => {
+  if (!qrCanvasRef.value) return;
+
+  try {
+    qrCanvasRef.value.toBlob((blob) => {
+      if (!blob) {
+        message.error('生成图片失败');
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const shortCode = currentQRUrl.value.split('/').pop() || 'qrcode';
+      const timestamp = Date.now();
+      link.download = `qrcode-${shortCode}-${timestamp}.png`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      message.success('下载成功');
+    });
+  } catch (error) {
+    console.error('下载失败:', error);
+    message.error('下载失败');
+  }
+};
+
+// 重置配置
+const handleResetQRConfig = () => {
+  qrConfig.value = { ...defaultQRConfig };
+  message.success('已重置为默认配置');
+};
+
+// 处理图片上传
+const handleImageUpload = (type: 'logo' | 'background') => {
+  return {
+    beforeUpload: (file: File) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (type === 'logo') {
+          qrConfig.value.logoImage = dataUrl;
+        } else {
+          qrConfig.value.backgroundImage = dataUrl;
+        }
+      };
+      reader.readAsDataURL(file);
+      return false; // 阻止自动上传
+    },
+  };
+};
+
+// 移除图片
+const handleRemoveImage = (type: 'logo' | 'background') => {
+  if (type === 'logo') {
+    qrConfig.value.logoImage = null;
+  } else {
+    qrConfig.value.backgroundImage = null;
+  }
+};
+
 // 生命周期
 onMounted(() => {
   loadData();
@@ -479,6 +738,13 @@ onMounted(() => {
           </template>
           <template v-else-if="column.key === 'actions'">
             <div class="flex space-x-2">
+              <Button
+                size="small"
+                type="link"
+                @click="handleShowQRCode(record as ShortLink)"
+              >
+                二维码
+              </Button>
               <Button
                 size="small"
                 type="link"
@@ -654,6 +920,227 @@ onMounted(() => {
             :pagination="false"
             size="small"
           />
+        </div>
+      </div>
+    </Modal>
+
+    <!-- 二维码弹窗 -->
+    <Modal
+      v-model:open="qrModalVisible"
+      title="二维码生成器"
+      width="1000px"
+      :footer="null"
+    >
+      <div class="flex gap-6">
+        <!-- 左侧：二维码显示区 -->
+        <div class="flex-shrink-0">
+          <div
+            class="flex items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 p-4"
+            :style="{ width: qrConfig.size + 40 + 'px', height: qrConfig.size + 40 + 'px' }"
+          >
+            <canvas ref="qrCanvasRef" />
+          </div>
+          <div class="mt-4 flex gap-2">
+            <Button type="primary" block @click="handleDownloadQR">
+              下载 PNG
+            </Button>
+            <Button block @click="handleResetQRConfig">重置默认</Button>
+          </div>
+        </div>
+
+        <!-- 右侧：配置面板 -->
+        <div class="flex-1 overflow-y-auto" style="max-height: 600px">
+          <Form layout="vertical">
+            <!-- 基础配置 -->
+            <div class="mb-4">
+              <h3 class="mb-3 text-base font-semibold">基础配置</h3>
+
+              <FormItem label="二维码尺寸">
+                <Slider
+                  v-model:value="qrConfig.size"
+                  :min="200"
+                  :max="800"
+                  :step="50"
+                />
+                <InputNumber
+                  v-model:value="qrConfig.size"
+                  :min="200"
+                  :max="800"
+                  class="mt-2 w-full"
+                />
+              </FormItem>
+
+              <FormItem label="前景色">
+                <div class="flex items-center gap-2">
+                  <Input
+                    v-model:value="qrConfig.colorDark"
+                    type="color"
+                    class="w-20"
+                    :disabled="qrConfig.useGradient"
+                  />
+                  <Input
+                    v-model:value="qrConfig.colorDark"
+                    class="flex-1"
+                    placeholder="#000000"
+                    :disabled="qrConfig.useGradient"
+                  />
+                </div>
+                <div v-if="qrConfig.useGradient" class="mt-1 text-sm text-gray-500">
+                  启用渐变色后此选项被禁用
+                </div>
+              </FormItem>
+
+              <FormItem label="背景色">
+                <div class="flex items-center gap-2">
+                  <Input
+                    v-model:value="qrConfig.colorLight"
+                    type="color"
+                    class="w-20"
+                  />
+                  <Input
+                    v-model:value="qrConfig.colorLight"
+                    class="flex-1"
+                    placeholder="#ffffff"
+                  />
+                </div>
+              </FormItem>
+
+              <FormItem label="容错率">
+                <Select v-model:value="qrConfig.correctLevel">
+                  <SelectOption value="L">L - 低 (约 7%)</SelectOption>
+                  <SelectOption value="M">M - 中 (约 15%)</SelectOption>
+                  <SelectOption value="Q">Q - 高 (约 25%)</SelectOption>
+                  <SelectOption value="H">H - 最高 (约 30%)</SelectOption>
+                </Select>
+              </FormItem>
+            </div>
+
+            <Divider />
+
+            <!-- 高级配置 -->
+            <div class="mb-4">
+              <h3 class="mb-3 text-base font-semibold">高级配置</h3>
+
+              <FormItem label="启用渐变色">
+                <Switch
+                  v-model:checked="qrConfig.useGradient"
+                  checked-children="开"
+                  un-checked-children="关"
+                />
+              </FormItem>
+
+              <template v-if="qrConfig.useGradient">
+                <FormItem label="渐变起始色">
+                  <div class="flex items-center gap-2">
+                    <Input
+                      v-model:value="qrConfig.gradientStartColor"
+                      type="color"
+                      class="w-20"
+                    />
+                    <Input
+                      v-model:value="qrConfig.gradientStartColor"
+                      class="flex-1"
+                      placeholder="#000000"
+                    />
+                  </div>
+                </FormItem>
+
+                <FormItem label="渐变结束色">
+                  <div class="flex items-center gap-2">
+                    <Input
+                      v-model:value="qrConfig.gradientEndColor"
+                      type="color"
+                      class="w-20"
+                    />
+                    <Input
+                      v-model:value="qrConfig.gradientEndColor"
+                      class="flex-1"
+                      placeholder="#0066ff"
+                    />
+                  </div>
+                </FormItem>
+
+                <FormItem label="渐变方向">
+                  <Select v-model:value="qrConfig.gradientDirection">
+                    <SelectOption value="horizontal">水平</SelectOption>
+                    <SelectOption value="vertical">垂直</SelectOption>
+                    <SelectOption value="diagonal">对角线</SelectOption>
+                  </Select>
+                </FormItem>
+              </template>
+
+              <FormItem label="点缩放比例">
+                <Slider
+                  v-model:value="qrConfig.dotScale"
+                  :min="0.5"
+                  :max="1.0"
+                  :step="0.05"
+                />
+                <div class="mt-1 text-sm text-gray-500">
+                  当前: {{ qrConfig.dotScale.toFixed(2) }}
+                </div>
+              </FormItem>
+
+              <FormItem label="Logo 图片">
+                <Upload
+                  :show-upload-list="false"
+                  accept="image/*"
+                  v-bind="handleImageUpload('logo')"
+                >
+                  <Button>
+                    {{ qrConfig.logoImage ? '更换 Logo' : '上传 Logo' }}
+                  </Button>
+                </Upload>
+                <div v-if="qrConfig.logoImage" class="mt-2">
+                  <img
+                    :src="qrConfig.logoImage"
+                    alt="Logo"
+                    class="h-16 w-16 rounded border"
+                  />
+                  <Button
+                    size="small"
+                    danger
+                    class="ml-2"
+                    @click="handleRemoveImage('logo')"
+                  >
+                    移除
+                  </Button>
+                </div>
+              </FormItem>
+
+              <FormItem label="背景图片">
+                <Upload
+                  :show-upload-list="false"
+                  accept="image/*"
+                  v-bind="handleImageUpload('background')"
+                >
+                  <Button>
+                    {{
+                      qrConfig.backgroundImage ? '更换背景' : '上传背景'
+                    }}
+                  </Button>
+                </Upload>
+                <div v-if="qrConfig.backgroundImage" class="mt-2">
+                  <img
+                    :src="qrConfig.backgroundImage"
+                    alt="Background"
+                    class="h-16 w-16 rounded border"
+                  />
+                  <Button
+                    size="small"
+                    danger
+                    class="ml-2"
+                    @click="handleRemoveImage('background')"
+                  >
+                    移除
+                  </Button>
+                </div>
+                <div class="mt-1 text-sm text-gray-500">
+                  背景图片会以低透明度显示
+                </div>
+              </FormItem>
+            </div>
+          </Form>
         </div>
       </div>
     </Modal>
