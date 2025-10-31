@@ -4,7 +4,7 @@
       <Select v-model:value="localEffect.type" @change="handleEffectTypeChange">
         <SelectOption value="none">无特效</SelectOption>
         <SelectOption value="round">圆角效果</SelectOption>
-        <SelectOption value="liquid">液体效果</SelectOption>
+        <SelectOption value="liquid">融合效果（液体风格）</SelectOption>
         <SelectOption value="dot">点状效果</SelectOption>
       </Select>
     </FormItem>
@@ -66,8 +66,8 @@ const emit = defineEmits<{
 const localEffect = reactive<QREffect>({ ...props.effect });
 
 // 处理特效类型变化
-const handleEffectTypeChange = (type: string) => {
-  if (type === 'none') {
+const handleEffectTypeChange = () => {
+  if (localEffect.type === 'none') {
     localEffect.value = 0;
   } else if (localEffect.value === 0) {
     localEffect.value = 0.5;
@@ -80,7 +80,7 @@ const getEffectDescription = (): string => {
     case 'round':
       return '圆角效果会将二维码的方块变得更圆润，适合追求柔和视觉效果的场景。';
     case 'liquid':
-      return '液体效果让二维码看起来像流动的液体，具有很强的艺术感和现代感。';
+      return '融合效果让二维码模块之间产生流动的连接，呈现液体般的视觉效果。';
     case 'dot':
       return '点状效果将二维码的方块转换为圆点，呈现出独特的视觉效果。';
     default:

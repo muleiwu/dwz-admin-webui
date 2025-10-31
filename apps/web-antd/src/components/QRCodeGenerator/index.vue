@@ -248,22 +248,26 @@
               <template v-if="logoType === 'text'">
                 <FormItem label="文字内容">
                   <Input
-                    v-model:value="logoText"
+                    :value="qrConfig.logo?.text || ''"
                     placeholder="输入文字"
+                    @input="updateLogoText"
+                    @change="updateLogoText"
                   />
                 </FormItem>
 
                 <FormItem label="文字颜色">
                   <div class="flex items-center gap-2">
-                    <Input
-                      v-model:value="logoColor"
+                    <input
+                      :value="qrConfig.logo?.options?.color || '#1890ff'"
                       type="color"
-                      class="w-20"
+                      class="w-20 h-8 cursor-pointer border rounded"
+                      @input="(e: any) => updateLogoColor(e.target.value)"
                     />
                     <Input
-                      v-model:value="logoColor"
+                      :value="qrConfig.logo?.options?.color || '#1890ff'"
                       class="flex-1"
                       placeholder="#1890ff"
+                      @update:value="updateLogoColor"
                     />
                   </div>
                 </FormItem>
@@ -282,17 +286,8 @@
                     class="mt-2 w-full"
                     addon-after="px"
                   />
-                </FormItem>
-
-                <FormItem label="Logo 大小">
-                  <Slider
-                    v-model:value="logoSize"
-                    :min="0.1"
-                    :max="0.3"
-                    :step="0.01"
-                  />
                   <div class="mt-1 text-sm text-gray-500">
-                    当前: {{ (logoSize * 100).toFixed(0) }}%
+                    文字大小会影响 Logo 在二维码中的显示效果
                   </div>
                 </FormItem>
 
@@ -304,7 +299,7 @@
                     class="w-full"
                   />
                   <div class="mt-1 text-sm text-gray-500">
-                    清除 Logo 周围的二维码点，避免干扰文字
+                    清除 Logo 周围的二维码点，避免干扰文字显示
                   </div>
                 </FormItem>
               </template>
@@ -537,59 +532,57 @@ const logoType = computed({
   },
 });
 
-// 文字 Logo 的响应式属性
-const logoText = computed({
-  get: () => qrConfig.value.logo?.text || '',
-  set: (value: string) => {
-    if (!qrConfig.value.logo) {
-      qrConfig.value.logo = {
-        text: value,
-        clearEdges: 2,
-        size: 0.2,
-        options: { color: '#1890ff', fontSize: 24 },
-      };
-    } else {
-      qrConfig.value.logo = { ...qrConfig.value.logo, text: value };
-    }
-  },
-});
-
-const logoColor = computed({
-  get: () => qrConfig.value.logo?.options?.color || '#1890ff',
-  set: (value: string) => {
-    if (!qrConfig.value.logo) return;
+// Logo 更新辅助函数 - 直接修改属性，不替换对象
+const updateLogoText = (value: any) => {
+  // 处理不同类型的事件参数
+  const text = typeof value === 'string' ? value : (value?.target?.value || value);
+  
+  if (!qrConfig.value.logo) {
     qrConfig.value.logo = {
-      ...qrConfig.value.logo,
-      options: { ...qrConfig.value.logo.options, color: value },
+      text,
+      clearEdges: 2,
+      size: 0.2,
+      options: { color: '#1890ff', fontSize: 24 },
     };
-  },
-});
+  } else {
+    // 直接修改属性，触发响应式更新和持久化
+    qrConfig.value.logo.text = text;
+  }
+};
 
+const updateLogoColor = (color: string) => {
+  if (!qrConfig.value.logo) return;
+  if (!qrConfig.value.logo.options) {
+    qrConfig.value.logo.options = { color: '#1890ff', fontSize: 24 };
+  }
+  // 直接修改属性
+  qrConfig.value.logo.options.color = color;
+};
+
+const updateLogoFontSize = (fontSize: number) => {
+  if (!qrConfig.value.logo) return;
+  if (!qrConfig.value.logo.options) {
+    qrConfig.value.logo.options = { color: '#1890ff', fontSize: 24 };
+  }
+  // 直接修改属性
+  qrConfig.value.logo.options.fontSize = fontSize;
+};
+
+const updateLogoClearEdges = (clearEdges: number) => {
+  if (!qrConfig.value.logo) return;
+  // 直接修改属性
+  qrConfig.value.logo.clearEdges = clearEdges;
+};
+
+// 文字 Logo 的响应式属性 - 使用更新函数
 const logoFontSize = computed({
   get: () => qrConfig.value.logo?.options?.fontSize || 24,
-  set: (value: number) => {
-    if (!qrConfig.value.logo) return;
-    qrConfig.value.logo = {
-      ...qrConfig.value.logo,
-      options: { ...qrConfig.value.logo.options, fontSize: value },
-    };
-  },
-});
-
-const logoSize = computed({
-  get: () => qrConfig.value.logo?.size || 0.2,
-  set: (value: number) => {
-    if (!qrConfig.value.logo) return;
-    qrConfig.value.logo = { ...qrConfig.value.logo, size: value };
-  },
+  set: updateLogoFontSize,
 });
 
 const logoClearEdges = computed({
   get: () => qrConfig.value.logo?.clearEdges || 2,
-  set: (value: number) => {
-    if (!qrConfig.value.logo) return;
-    qrConfig.value.logo = { ...qrConfig.value.logo, clearEdges: value };
-  },
+  set: updateLogoClearEdges,
 });
 
 // Logo 管理
@@ -635,8 +628,9 @@ const handleClose = () => {
 };
 
 // 监听配置变化，自动重新生成二维码（带防抖）
+// 注意：直接传递 ref，不要用函数包装，这样才能正确追踪 useStorage 的深层变化
 watch(
-  () => qrConfig.value,
+  qrConfig,
   () => {
     if (visible.value && qrCanvasRef.value) {
       // 清除之前的定时器

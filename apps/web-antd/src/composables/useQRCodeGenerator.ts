@@ -209,33 +209,28 @@ export function useQRCodeGenerator() {
 
   /**
    * 应用特效选项
+   * 映射内部类型名称到 qrcanvas API 支持的类型
    */
   const applyEffectOptions = (
     qrcanvasOptions: any,
     effect: { type: string; value: number },
   ): void => {
-    // qrcanvas 支持的特效需要通过特定的渲染器来实现
-    // 这里简化处理，实际可能需要使用不同的渲染方式
-    switch (effect.type) {
-      case 'round':
-        // 圆角效果 - 可以通过自定义渲染器实现
-        qrcanvasOptions.effect = {
-          type: 'round',
-          value: effect.value,
-        };
-        break;
-      case 'liquid':
-        qrcanvasOptions.effect = {
-          type: 'liquid',
-          value: effect.value,
-        };
-        break;
-      case 'dot':
-        qrcanvasOptions.effect = {
-          type: 'dot',
-          value: effect.value,
-        };
-        break;
+    // 映射到 qrcanvas 支持的特效类型（全小写）
+    // qrcanvas API: none, fusion, round, spot
+    const effectTypeMap: Record<string, string> = {
+      'none': 'none',
+      'round': 'round',
+      'liquid': 'fusion',  // 液体效果对应 fusion
+      'dot': 'spot',       // 点状效果对应 spot
+    };
+
+    const qrcanvasEffectType = effectTypeMap[effect.type] || 'none';
+
+    if (qrcanvasEffectType !== 'none') {
+      qrcanvasOptions.effect = {
+        type: qrcanvasEffectType,
+        value: effect.value,
+      };
     }
   };
 
