@@ -248,7 +248,7 @@
               <template v-if="logoType === 'text'">
                 <FormItem label="文字内容">
                   <Input
-                    v-model:value="qrConfig.logo!.text"
+                    v-model:value="logoText"
                     placeholder="输入文字"
                   />
                 </FormItem>
@@ -256,12 +256,12 @@
                 <FormItem label="文字颜色">
                   <div class="flex items-center gap-2">
                     <Input
-                      v-model:value="qrConfig.logo!.options!.color"
+                      v-model:value="logoColor"
                       type="color"
                       class="w-20"
                     />
                     <Input
-                      v-model:value="qrConfig.logo!.options!.color"
+                      v-model:value="logoColor"
                       class="flex-1"
                       placeholder="#1890ff"
                     />
@@ -270,13 +270,13 @@
 
                 <FormItem label="字体大小">
                   <Slider
-                    v-model:value="qrConfig.logo!.options!.fontSize"
+                    v-model:value="logoFontSize"
                     :min="12"
                     :max="48"
                     :step="1"
                   />
                   <InputNumber
-                    v-model:value="qrConfig.logo!.options!.fontSize"
+                    v-model:value="logoFontSize"
                     :min="12"
                     :max="48"
                     class="mt-2 w-full"
@@ -286,19 +286,19 @@
 
                 <FormItem label="Logo 大小">
                   <Slider
-                    v-model:value="qrConfig.logo!.size"
+                    v-model:value="logoSize"
                     :min="0.1"
                     :max="0.3"
                     :step="0.01"
                   />
                   <div class="mt-1 text-sm text-gray-500">
-                    当前: {{ ((qrConfig.logo?.size || 0.2) * 100).toFixed(0) }}%
+                    当前: {{ (logoSize * 100).toFixed(0) }}%
                   </div>
                 </FormItem>
 
                 <FormItem label="清除边缘点数">
                   <InputNumber
-                    v-model:value="qrConfig.logo!.clearEdges"
+                    v-model:value="logoClearEdges"
                     :min="0"
                     :max="5"
                     class="w-full"
@@ -441,6 +441,10 @@ const applyPreset = (presetId: string) => {
       ...qrConfig.value,
       ...preset.config,
     });
+    // 应用预设后重新初始化 Logo 类型
+    nextTick(() => {
+      initLogoType();
+    });
   }
 };
 
@@ -495,14 +499,26 @@ const getLayerTypeName = (type: string): string => {
   return names[type] || type;
 };
 
+// Logo 类型状态
+const currentLogoType = ref<'none' | 'image' | 'text'>('none');
+
+// 初始化 Logo 类型
+const initLogoType = () => {
+  if (qrConfig.value.logoImage) {
+    currentLogoType.value = 'image';
+  } else if (qrConfig.value.logo?.text) {
+    currentLogoType.value = 'text';
+  } else {
+    currentLogoType.value = 'none';
+  }
+};
+
 // Logo 类型管理
 const logoType = computed({
-  get: () => {
-    if (qrConfig.value.logoImage) return 'image';
-    if (qrConfig.value.logo?.text) return 'text';
-    return 'none';
-  },
+  get: () => currentLogoType.value,
   set: (value: 'none' | 'image' | 'text') => {
+    currentLogoType.value = value;
+    
     if (value === 'none') {
       qrConfig.value.logoImage = null;
       qrConfig.value.logo = undefined;
@@ -516,8 +532,63 @@ const logoType = computed({
       };
     } else if (value === 'image') {
       qrConfig.value.logo = undefined;
-      // logoImage 保持现有值或为 null
+      // 如果没有 logoImage，保持为 null，用户需要上传
     }
+  },
+});
+
+// 文字 Logo 的响应式属性
+const logoText = computed({
+  get: () => qrConfig.value.logo?.text || '',
+  set: (value: string) => {
+    if (!qrConfig.value.logo) {
+      qrConfig.value.logo = {
+        text: value,
+        clearEdges: 2,
+        size: 0.2,
+        options: { color: '#1890ff', fontSize: 24 },
+      };
+    } else {
+      qrConfig.value.logo = { ...qrConfig.value.logo, text: value };
+    }
+  },
+});
+
+const logoColor = computed({
+  get: () => qrConfig.value.logo?.options?.color || '#1890ff',
+  set: (value: string) => {
+    if (!qrConfig.value.logo) return;
+    qrConfig.value.logo = {
+      ...qrConfig.value.logo,
+      options: { ...qrConfig.value.logo.options, color: value },
+    };
+  },
+});
+
+const logoFontSize = computed({
+  get: () => qrConfig.value.logo?.options?.fontSize || 24,
+  set: (value: number) => {
+    if (!qrConfig.value.logo) return;
+    qrConfig.value.logo = {
+      ...qrConfig.value.logo,
+      options: { ...qrConfig.value.logo.options, fontSize: value },
+    };
+  },
+});
+
+const logoSize = computed({
+  get: () => qrConfig.value.logo?.size || 0.2,
+  set: (value: number) => {
+    if (!qrConfig.value.logo) return;
+    qrConfig.value.logo = { ...qrConfig.value.logo, size: value };
+  },
+});
+
+const logoClearEdges = computed({
+  get: () => qrConfig.value.logo?.clearEdges || 2,
+  set: (value: number) => {
+    if (!qrConfig.value.logo) return;
+    qrConfig.value.logo = { ...qrConfig.value.logo, clearEdges: value };
   },
 });
 
@@ -583,10 +654,29 @@ watch(
   { deep: true },
 );
 
+// 监听 Logo 配置变化，同步 Logo 类型状态
+watch(
+  () => [qrConfig.value.logoImage, qrConfig.value.logo?.text],
+  () => {
+    // 避免在用户主动切换类型时重复初始化
+    const expectedType = qrConfig.value.logoImage
+      ? 'image'
+      : qrConfig.value.logo?.text
+        ? 'text'
+        : 'none';
+    
+    if (currentLogoType.value !== expectedType) {
+      currentLogoType.value = expectedType;
+    }
+  },
+  { deep: true },
+);
+
 // 监听显示状态，打开时生成二维码
 watch(visible, (newValue) => {
   if (newValue) {
     activeTabKey.value = 'preset';
+    initLogoType(); // 初始化 Logo 类型
     nextTick(() => {
       handleGenerateQR();
     });
