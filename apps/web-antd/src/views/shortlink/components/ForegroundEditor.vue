@@ -195,8 +195,8 @@ const gradientConfig = ref<GradientConfig>({
   type: 'linear',
   direction: 'diagonal',
   colors: [
-    { offset: 0, color: '#1890ff' },
-    { offset: 1, color: '#0050b3' },
+    { offset: 0, color: '#1e3c72' },
+    { offset: 1, color: '#2a5298' },
   ],
 });
 

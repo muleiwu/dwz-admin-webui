@@ -226,7 +226,8 @@ onMounted(() => {
             class="flex items-center space-x-3 rounded-lg p-3 transition-colors hover:bg-gray-50"
           >
             <div
-              class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-gradient-to-br from-blue-500 to-purple-600 text-xs font-bold text-white"
+              class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded text-xs font-bold text-white"
+              style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
             >
               {{ index + 1 }}
             </div>
