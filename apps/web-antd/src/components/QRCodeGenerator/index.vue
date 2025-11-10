@@ -346,11 +346,11 @@ import type {
   QREffect,
   QRForegroundArea,
 } from '../../types/qrcode';
-import EffectSelector from '../../views/shortlink/components/EffectSelector.vue';
-import FillLayerEditor from '../../views/shortlink/components/FillLayerEditor.vue';
-import ForegroundEditor from '../../views/shortlink/components/ForegroundEditor.vue';
-import ImageLayerEditor from '../../views/shortlink/components/ImageLayerEditor.vue';
-import TextLayerEditor from '../../views/shortlink/components/TextLayerEditor.vue';
+import EffectSelector from './components/EffectSelector.vue';
+import FillLayerEditor from './components/FillLayerEditor.vue';
+import ForegroundEditor from './components/ForegroundEditor.vue';
+import ImageLayerEditor from './components/ImageLayerEditor.vue';
+import TextLayerEditor from './components/TextLayerEditor.vue';
 
 // Props
 interface Props {
