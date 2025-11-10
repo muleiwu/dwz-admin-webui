@@ -97,6 +97,7 @@ export interface QRLogo {
 
 // 完整配置
 export interface QRCodeConfig {
+  initialized?: boolean; // 跟踪配置是否已初始化
   size: number;
   correctLevel: ErrorCorrectionLevel;
   padding?: number; // 内边距

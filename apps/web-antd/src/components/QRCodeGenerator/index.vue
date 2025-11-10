@@ -669,6 +669,12 @@ watch(
 // 监听显示状态，打开时生成二维码
 watch(visible, (newValue) => {
   if (newValue) {
+    // 检查是否是首次使用（未初始化）
+    if (!qrConfig.value.initialized) {
+      applyPreset('classic');
+      qrConfig.value.initialized = true;
+    }
+    
     activeTabKey.value = 'preset';
     initLogoType(); // 初始化 Logo 类型
     nextTick(() => {
