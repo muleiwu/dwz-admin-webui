@@ -3,11 +3,7 @@ import type { AboutProps, DescriptionItem } from './about';
 
 import { h } from 'vue';
 
-import {
-  VBEN_DOC_URL,
-  VBEN_GITHUB_URL,
-  VBEN_PREVIEW_URL,
-} from '@vben/constants';
+import { VBEN_DOC_URL, VBEN_GITHUB_URL } from '@vben/constants';
 
 import { VbenRenderContent } from '@vben-core/shadcn-ui';
 
@@ -50,53 +46,15 @@ const renderLink = (href: string, text: string) =>
   );
 
 const {
-  authorEmail,
-  authorName,
-  authorUrl,
-  buildTime,
   dependencies = {},
   devDependencies = {},
-  homepage,
-  license,
-  version,
   // vite inject-metadata 插件注入的全局变量
 } = __VBEN_ADMIN_METADATA__ || {};
 
 const vbenDescriptionItems: DescriptionItem[] = [
   {
-    content: version,
-    title: '版本号',
-  },
-  {
-    content: license,
-    title: '开源许可协议',
-  },
-  {
-    content: buildTime,
-    title: '最后构建时间',
-  },
-  {
-    content: renderLink(homepage, '点击查看'),
-    title: '主页',
-  },
-  {
     content: renderLink(VBEN_DOC_URL, '点击查看'),
     title: '文档地址',
-  },
-  {
-    content: renderLink(VBEN_PREVIEW_URL, '点击查看'),
-    title: '预览地址',
-  },
-  {
-    content: renderLink(VBEN_GITHUB_URL, '点击查看'),
-    title: 'Github',
-  },
-  {
-    content: h('div', [
-      renderLink(authorUrl, `${authorName}  `),
-      renderLink(`mailto:${authorEmail}`, authorEmail),
-    ]),
-    title: '作者',
   },
 ];
 

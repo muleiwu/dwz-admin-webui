@@ -11,6 +11,7 @@ export const overridesPreferences = defineOverridesPreferences({
     name: import.meta.env.VITE_APP_TITLE,
     defaultHomePath: '/shortlink/list',
     layout: 'sidebar-mixed-nav',
+    enablePreferences: false,
   },
   copyright: {
     companyName: '合肥木雷坞信息技术有限公司',
