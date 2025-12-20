@@ -92,7 +92,7 @@ watch(
   async (enable) => {
     if (enable) {
       await updateWatermark({
-        content: `${userStore.userInfo?.username} - ${userStore.userInfo?.realName}`,
+        content: `${userStore.userInfo?.username} - ${userStore.userInfo?.real_name}`,
       });
     } else {
       destroyWatermark();
@@ -110,9 +110,9 @@ watch(
       <UserDropdown
         :avatar
         :menus
-        :text="userStore.userInfo?.realName"
-        description="ann.vben@gmail.com"
-        tag-text="Pro"
+        :text="userStore.userInfo?.real_name"
+        :description="userStore.userInfo?.email || '暂无邮箱'"
+        :tag-text="userStore.userInfo?.username"
         @logout="handleLogout"
       />
     </template>
