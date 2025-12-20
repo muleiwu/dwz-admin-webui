@@ -10,5 +10,30 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     name: import.meta.env.VITE_APP_TITLE,
     defaultHomePath: '/shortlink/list',
+    layout: 'sidebar-mixed-nav',
+  },
+  copyright: {
+    companyName: '合肥木雷坞信息技术有限公司',
+    companySiteLink: 'https://www.mliev.com',
+    date: '2025',
+  },
+  footer: {
+    enable: true,
+  },
+  shortcutKeys: {
+    enable: false,
+    globalLockScreen: false,
+    globalSearch: false,
+  },
+  theme: {
+    mode: 'light',
+  },
+  widget: {
+    fullscreen: false,
+    globalSearch: false,
+    languageToggle: false,
+    lockScreen: false,
+    notification: false,
+    themeToggle: false,
   },
 });
