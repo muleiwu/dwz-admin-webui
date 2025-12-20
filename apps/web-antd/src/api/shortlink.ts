@@ -11,7 +11,7 @@ export interface ShortLink {
   original_url: string;
   title?: string;
   description?: string;
-  expire_at?: string | null;
+  expire_at?: null | string;
   is_active: boolean;
   click_count: number;
   created_at: string;
@@ -24,14 +24,14 @@ export interface CreateShortLinkRequest {
   custom_code?: string;
   title?: string;
   description?: string;
-  expire_at?: string | null;
+  expire_at?: null | string;
 }
 
 export interface UpdateShortLinkRequest {
   original_url?: string;
   title?: string;
   description?: string;
-  expire_at?: string | null;
+  expire_at?: null | string;
   is_active?: boolean;
 }
 
@@ -50,8 +50,8 @@ export interface BatchCreateRequest {
 export interface BatchCreateResponse {
   success: ShortLink[];
   failed: Array<{
-    url: string;
     error: string;
+    url: string;
   }>;
 }
 
@@ -61,8 +61,8 @@ export interface ShortLinkStatistics {
   week_clicks: number;
   month_clicks: number;
   daily_statistics: Array<{
-    date: string;
     click_count: number;
+    date: string;
   }>;
 }
 

@@ -355,7 +355,9 @@ onMounted(() => {
         <FormItem name="random_suffix_length">
           <template #label>
             <span>随机后缀位数</span>
-            <Tooltip title="设置短码随机后缀的字符数量，0表示不添加随机后缀，范围0-10">
+            <Tooltip
+              title="设置短码随机后缀的字符数量，0表示不添加随机后缀，范围0-10"
+            >
               <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
             </Tooltip>
           </template>
