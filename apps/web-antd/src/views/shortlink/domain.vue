@@ -11,6 +11,7 @@ import {
   Form,
   FormItem,
   Input,
+  InputNumber,
   message,
   Modal,
   Popconfirm,
@@ -20,6 +21,7 @@ import {
   Table,
   Tag,
   Textarea,
+  Tooltip,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
@@ -43,6 +45,8 @@ const formData = reactive<CreateDomainRequest & { is_active?: boolean }>({
   pass_query_params: false,
   description: '',
   is_active: true,
+  random_suffix_length: 2,
+  enable_checksum: true,
 });
 
 // 表单验证规则
@@ -89,6 +93,16 @@ const columns = [
     title: '查询参数',
     key: 'pass_query_params',
     width: 100,
+  },
+  {
+    title: '随机后缀位数',
+    dataIndex: 'random_suffix_length',
+    width: 120,
+  },
+  {
+    title: '校验位',
+    key: 'enable_checksum',
+    width: 80,
   },
   {
     title: '描述',
@@ -141,6 +155,8 @@ const handleEdit = (record: Domain) => {
     pass_query_params: record.pass_query_params,
     description: record.description,
     is_active: record.is_active,
+    random_suffix_length: record.random_suffix_length ?? 2,
+    enable_checksum: record.enable_checksum ?? true,
   });
   modalVisible.value = true;
 };
@@ -199,6 +215,8 @@ const resetForm = () => {
     pass_query_params: false,
     description: '',
     is_active: true,
+    random_suffix_length: 2,
+    enable_checksum: true,
   });
 };
 
@@ -251,6 +269,11 @@ onMounted(() => {
           <template v-else-if="column.key === 'pass_query_params'">
             <Tag :color="record.pass_query_params ? 'green' : 'red'">
               {{ record.pass_query_params ? '透传' : '不透传' }}
+            </Tag>
+          </template>
+          <template v-else-if="column.key === 'enable_checksum'">
+            <Tag :color="record.enable_checksum ? 'green' : 'default'">
+              {{ record.enable_checksum ? '启用' : '禁用' }}
             </Tag>
           </template>
           <template v-else-if="column.key === 'actions'">
@@ -327,6 +350,40 @@ onMounted(() => {
           />
           <div class="mt-2 text-sm text-gray-500">
             启用后，跳转时会将短网址的查询参数透传给原始URL
+          </div>
+        </FormItem>
+        <FormItem name="random_suffix_length">
+          <template #label>
+            <span>随机后缀位数</span>
+            <Tooltip title="设置短码随机后缀的字符数量，0表示不添加随机后缀，范围0-10">
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <InputNumber
+            v-model:value="formData.random_suffix_length"
+            :min="0"
+            :max="10"
+            placeholder="0-10，默认2"
+            style="width: 100%"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            设置短码随机后缀的字符数量，0表示不添加随机后缀
+          </div>
+        </FormItem>
+        <FormItem name="enable_checksum">
+          <template #label>
+            <span>启用校验位</span>
+            <Tooltip title="启用后会在短码末尾添加校验字符，用于验证短码完整性">
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <Switch
+            v-model:checked="formData.enable_checksum"
+            checked-children="启用"
+            un-checked-children="禁用"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            启用后会在短码末尾添加校验字符，用于验证短码完整性
           </div>
         </FormItem>
         <FormItem label="描述" name="description">

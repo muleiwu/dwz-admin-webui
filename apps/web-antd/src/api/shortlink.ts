@@ -76,6 +76,8 @@ export interface Domain {
   is_active: boolean;
   pass_query_params: boolean;
   description?: string;
+  random_suffix_length: number;
+  enable_checksum: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -89,6 +91,8 @@ export interface CreateDomainRequest {
   is_active?: boolean;
   pass_query_params?: boolean;
   description?: string;
+  random_suffix_length?: number;
+  enable_checksum?: boolean;
 }
 
 export interface UpdateDomainRequest {
@@ -99,6 +103,8 @@ export interface UpdateDomainRequest {
   is_active?: boolean;
   pass_query_params?: boolean;
   description?: string;
+  random_suffix_length?: number;
+  enable_checksum?: boolean;
 }
 
 export interface UpdateStatusDomainRequest {
