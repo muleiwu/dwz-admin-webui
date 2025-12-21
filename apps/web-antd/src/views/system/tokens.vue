@@ -2,14 +2,27 @@
 import type { Dayjs } from 'dayjs';
 
 // 使用 API 定义的类型
-import type { CreateTokenRequest, Token } from '#/api';
+import type {
+  CreateTokenRequest,
+  CreateTokenResponse,
+  Token,
+  TokenType,
+} from '#/api';
 
 import { onMounted, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
-import { CircleCheckBig, Copy, Plus, Search } from '@vben/icons';
+import {
+  CircleAlert,
+  CircleCheckBig,
+  Copy,
+  Plus,
+  Search,
+  ShieldCheck,
+} from '@vben/icons';
 
 import {
+  Alert,
   Button,
   Card,
   DatePicker,
@@ -19,14 +32,21 @@ import {
   message,
   Modal,
   Popconfirm,
+  Radio,
+  RadioGroup,
   Select,
   SelectOption,
   Table,
   Tag,
+  Tooltip,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
-import { TokenApi } from '#/api';
+import {
+  isBearerTokenResponse,
+  isSignatureTokenResponse,
+  TokenApi,
+} from '#/api';
 
 // 响应式数据
 const loading = ref(false);
@@ -34,7 +54,7 @@ const createLoading = ref(false);
 const dataSource = ref<Token[]>([]);
 const createModalVisible = ref(false);
 const successModalVisible = ref(false);
-const newToken = ref('');
+const createdTokenResponse = ref<CreateTokenResponse | null>(null);
 const createFormRef = ref();
 
 // 搜索参数
@@ -46,6 +66,7 @@ const searchParams = reactive({
 // 创建表单
 const createForm = reactive<CreateTokenRequest>({
   token_name: '',
+  token_type: 'signature' as TokenType,
   expire_at: undefined,
 });
 
@@ -65,6 +86,9 @@ const createRules = {
     { required: true, message: '请输入Token名称', trigger: 'blur' as const },
     { max: 100, message: 'Token名称不能超过100字符', trigger: 'blur' as const },
   ],
+  token_type: [
+    { required: true, message: '请选择Token类型', trigger: 'change' as const },
+  ],
 } as any;
 
 // 表格列定义
@@ -77,12 +101,17 @@ const columns = [
   {
     title: 'Token名称',
     dataIndex: 'token_name',
-    width: 200,
+    width: 180,
   },
   {
-    title: 'Token',
-    key: 'token',
-    width: 300,
+    title: '认证类型',
+    key: 'token_type',
+    width: 140,
+  },
+  {
+    title: 'Token / AppID',
+    key: 'token_or_appid',
+    width: 280,
   },
   {
     title: '状态',
@@ -92,17 +121,17 @@ const columns = [
   {
     title: '过期时间',
     key: 'expire_at',
-    width: 180,
+    width: 160,
   },
   {
     title: '最后使用',
     key: 'last_used_at',
-    width: 180,
+    width: 160,
   },
   {
     title: '创建时间',
     dataIndex: 'created_at',
-    width: 180,
+    width: 160,
     customRender: ({ text }: { text: string }) => formatDate(text),
   },
   {
@@ -166,6 +195,7 @@ const handleCreate = async () => {
 
     const requestData: CreateTokenRequest = {
       token_name: createForm.token_name,
+      token_type: createForm.token_type,
       expire_at: createForm.expire_at
         ? dayjs(createForm.expire_at).toISOString()
         : undefined,
@@ -174,7 +204,7 @@ const handleCreate = async () => {
     const response = await TokenApi.create(requestData);
 
     message.success('Token创建成功');
-    newToken.value = response.token || '';
+    createdTokenResponse.value = response;
     createModalVisible.value = false;
     successModalVisible.value = true;
 
@@ -227,12 +257,13 @@ const copyToClipboard = async (text: string) => {
 // 关闭成功弹窗
 const closeSuccessModal = () => {
   successModalVisible.value = false;
-  newToken.value = '';
+  createdTokenResponse.value = null;
 };
 
 // 重置创建表单
 const resetCreateForm = () => {
   createForm.token_name = '';
+  createForm.token_type = 'signature';
   createForm.expire_at = undefined;
   createFormRef.value?.resetFields();
 };
@@ -252,6 +283,16 @@ const maskToken = (token?: string) => {
 // 格式化日期
 const formatDate = (dateString: string) => {
   return dayjs(dateString).format('YYYY-MM-DD HH:mm:ss');
+};
+
+// 获取Token类型显示文本
+const getTokenTypeLabel = (tokenType: TokenType) => {
+  return tokenType === 'signature' ? '签名认证' : 'Bearer Token';
+};
+
+// 获取Token类型颜色
+const getTokenTypeColor = (tokenType: TokenType) => {
+  return tokenType === 'signature' ? 'green' : 'orange';
 };
 
 // 生命周期
@@ -312,22 +353,59 @@ onMounted(() => {
         :loading="loading"
         :pagination="paginationConfig"
         row-key="id"
+        :scroll="{ x: 1400 }"
         @change="handleTableChange"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'token'">
-            <div class="flex items-center space-x-2">
-              <code class="rounded bg-gray-100 px-2 py-1 text-xs">{{
-                maskToken(record.token)
-              }}</code>
-              <Button
-                v-if="record.token"
-                size="small"
-                type="link"
-                @click="copyToClipboard(record.token)"
+          <!-- 认证类型列 -->
+          <template v-if="column.key === 'token_type'">
+            <div class="flex items-center space-x-1">
+              <Tag :color="getTokenTypeColor(record.token_type || 'bearer')">
+                <template v-if="record.token_type === 'signature'">
+                  <ShieldCheck class="mr-1 inline h-3 w-3" />
+                </template>
+                {{ getTokenTypeLabel(record.token_type || 'bearer') }}
+              </Tag>
+              <Tooltip
+                v-if="record.token_type === 'bearer' || !record.token_type"
+                title="Bearer Token 安全性较低，建议升级为签名认证"
               >
-                <Copy class="h-4 w-4" />
-              </Button>
+                <CircleAlert class="h-4 w-4 text-orange-500" />
+              </Tooltip>
+            </div>
+          </template>
+
+          <!-- Token / AppID 列 -->
+          <template v-else-if="column.key === 'token_or_appid'">
+            <div class="flex items-center space-x-2">
+              <template v-if="record.token_type === 'signature'">
+                <code
+                  class="rounded bg-green-50 px-2 py-1 text-xs text-green-700"
+                >
+                  {{ record.app_id || '***' }}
+                </code>
+                <Button
+                  v-if="record.app_id"
+                  size="small"
+                  type="link"
+                  @click="copyToClipboard(record.app_id)"
+                >
+                  <Copy class="h-4 w-4" />
+                </Button>
+              </template>
+              <template v-else>
+                <code class="rounded bg-gray-100 px-2 py-1 text-xs">
+                  {{ maskToken(record.token) }}
+                </code>
+                <Button
+                  v-if="record.token"
+                  size="small"
+                  type="link"
+                  @click="copyToClipboard(record.token)"
+                >
+                  <Copy class="h-4 w-4" />
+                </Button>
+              </template>
             </div>
           </template>
 
@@ -369,7 +447,7 @@ onMounted(() => {
     <Modal
       v-model:open="createModalVisible"
       title="创建API Token"
-      width="500px"
+      width="520px"
       @ok="handleCreate"
       @cancel="handleCreateCancel"
       :confirm-loading="createLoading"
@@ -388,6 +466,61 @@ onMounted(() => {
           />
         </FormItem>
 
+        <FormItem label="认证类型" name="token_type">
+          <RadioGroup v-model:value="createForm.token_type">
+            <div class="space-y-3">
+              <div
+                class="flex items-start rounded-lg border p-3"
+                :class="
+                  createForm.token_type === 'signature'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-200'
+                "
+              >
+                <Radio value="signature" class="mt-0.5">
+                  <div class="ml-1">
+                    <div class="flex items-center font-medium">
+                      <ShieldCheck class="mr-1 h-4 w-4 text-green-600" />
+                      签名认证
+                      <Tag color="green" class="ml-2">推荐</Tag>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                      使用 HMAC-SHA256 签名验证，密钥不在网络传输，安全性更高
+                    </div>
+                  </div>
+                </Radio>
+              </div>
+              <div
+                class="flex items-start rounded-lg border p-3"
+                :class="
+                  createForm.token_type === 'bearer'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-gray-200'
+                "
+              >
+                <Radio value="bearer" class="mt-0.5">
+                  <div class="ml-1">
+                    <div class="flex items-center font-medium">
+                      Bearer Token
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500">
+                      传统 Token 认证方式，Token 直接在请求头中传输
+                    </div>
+                  </div>
+                </Radio>
+              </div>
+            </div>
+          </RadioGroup>
+          <Alert
+            v-if="createForm.token_type === 'bearer'"
+            type="warning"
+            show-icon
+            class="mt-3"
+            message="安全提示"
+            description="Bearer Token 在网络传输中可能被截获，建议仅在内网环境或测试场景使用。生产环境推荐使用签名认证。"
+          />
+        </FormItem>
+
         <FormItem label="过期时间" name="expire_at">
           <DatePicker
             v-model:value="createForm.expire_at"
@@ -400,41 +533,126 @@ onMounted(() => {
       </Form>
     </Modal>
 
-    <!-- Token创建成功弹窗 -->
+    <!-- Token创建成功弹窗 - 签名认证类型 -->
     <Modal
       v-model:open="successModalVisible"
       title="Token创建成功"
-      width="600px"
+      width="640px"
       :footer="null"
       :mask-closable="false"
       :closable="false"
     >
       <div class="text-center">
         <div class="mb-4">
-          <CircleCheckBig class="mx-auto text-4xl text-green-500" />
+          <CircleCheckBig class="mx-auto h-12 w-12 text-green-500" />
         </div>
         <h3 class="mb-4 text-lg font-semibold">Token创建成功！</h3>
-        <div class="mb-4 rounded border border-yellow-200 bg-yellow-50 p-4">
-          <p class="text-sm text-yellow-800">
-            <strong>重要提示：</strong>
-            请立即复制并保存您的Token，离开此页面后将无法再次查看完整Token！
-          </p>
-        </div>
-        <div class="mb-4">
-          <div class="rounded border bg-gray-50 p-3">
-            <div class="flex items-center justify-between">
-              <code class="mr-2 flex-1 break-all font-mono text-sm">{{
-                newToken
-              }}</code>
-              <Button type="primary" @click="copyToClipboard(newToken)">
-                <Copy class="mr-1 h-4 w-4" />
-                复制
-              </Button>
+
+        <!-- 签名认证类型成功提示 -->
+        <template
+          v-if="
+            createdTokenResponse &&
+            isSignatureTokenResponse(createdTokenResponse)
+          "
+        >
+          <div class="mb-4 rounded border border-yellow-200 bg-yellow-50 p-4">
+            <p class="text-sm text-yellow-800">
+              <strong>重要提示：</strong>
+              请立即复制并安全保存您的 App ID 和 App
+              Secret，离开此页面后将无法再次查看 App Secret！
+            </p>
+          </div>
+
+          <div class="space-y-4 text-left">
+            <!-- App ID -->
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">
+                App ID
+              </label>
+              <div class="rounded border bg-gray-50 p-3">
+                <div class="flex items-center justify-between">
+                  <code class="mr-2 flex-1 break-all font-mono text-sm">
+                    {{ createdTokenResponse.app_id }}
+                  </code>
+                  <Button
+                    type="primary"
+                    size="small"
+                    @click="copyToClipboard(createdTokenResponse.app_id)"
+                  >
+                    <Copy class="mr-1 h-4 w-4" />
+                    复制
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <!-- App Secret -->
+            <div>
+              <label class="mb-1 block text-sm font-medium text-gray-700">
+                App Secret
+                <Tag color="red" class="ml-2">仅显示一次</Tag>
+              </label>
+              <div class="rounded border border-red-200 bg-red-50 p-3">
+                <div class="flex items-center justify-between">
+                  <code
+                    class="mr-2 flex-1 break-all font-mono text-sm text-red-700"
+                  >
+                    {{ createdTokenResponse.app_secret }}
+                  </code>
+                  <Button
+                    type="primary"
+                    danger
+                    size="small"
+                    @click="copyToClipboard(createdTokenResponse.app_secret)"
+                  >
+                    <Copy class="mr-1 h-4 w-4" />
+                    复制
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="flex justify-center">
-          <Button type="primary" @click="closeSuccessModal"> 我已保存 </Button>
+        </template>
+
+        <!-- Bearer Token 类型成功提示 -->
+        <template
+          v-else-if="
+            createdTokenResponse && isBearerTokenResponse(createdTokenResponse)
+          "
+        >
+          <div class="mb-4 rounded border border-yellow-200 bg-yellow-50 p-4">
+            <p class="text-sm text-yellow-800">
+              <strong>重要提示：</strong>
+              请立即复制并保存您的 Token，离开此页面后将无法再次查看完整 Token！
+            </p>
+          </div>
+
+          <div class="text-left">
+            <label class="mb-1 block text-sm font-medium text-gray-700">
+              Bearer Token
+              <Tag color="red" class="ml-2">仅显示一次</Tag>
+            </label>
+            <div class="rounded border bg-gray-50 p-3">
+              <div class="flex items-center justify-between">
+                <code class="mr-2 flex-1 break-all font-mono text-sm">
+                  {{ createdTokenResponse.token }}
+                </code>
+                <Button
+                  type="primary"
+                  @click="copyToClipboard(createdTokenResponse.token)"
+                >
+                  <Copy class="mr-1 h-4 w-4" />
+                  复制
+                </Button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div class="mt-6 flex justify-center">
+          <Button type="primary" size="large" @click="closeSuccessModal">
+            我已安全保存
+          </Button>
         </div>
       </div>
     </Modal>
