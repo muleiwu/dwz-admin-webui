@@ -356,7 +356,11 @@ onMounted(() => {
           <template #label>
             <span>随机后缀位数</span>
             <Tooltip
-              title="设置短码随机后缀的字符数量，0表示不添加随机后缀，范围0-10"
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致已生成的短码格式不一致'
+                  : '设置短码随机后缀的字符数量，0表示不添加随机后缀，范围0-10'
+              "
             >
               <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
             </Tooltip>
@@ -367,15 +371,29 @@ onMounted(() => {
             :max="10"
             placeholder="0-10，默认2"
             style="width: 100%"
+            :disabled="isEdit"
           />
           <div class="mt-2 text-sm text-gray-500">
-            设置短码随机后缀的字符数量，0表示不添加随机后缀
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致已生成的短码格式不一致
+              </span>
+            </template>
+            <template v-else>
+              设置短码随机后缀的字符数量，0表示不添加随机后缀
+            </template>
           </div>
         </FormItem>
         <FormItem name="enable_checksum">
           <template #label>
             <span>启用校验位</span>
-            <Tooltip title="启用后会在短码末尾添加校验字符，用于验证短码完整性">
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致已生成的短码格式不一致'
+                  : '启用后会在短码末尾添加校验字符，用于验证短码完整性'
+              "
+            >
               <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
             </Tooltip>
           </template>
@@ -383,9 +401,17 @@ onMounted(() => {
             v-model:checked="formData.enable_checksum"
             checked-children="启用"
             un-checked-children="禁用"
+            :disabled="isEdit"
           />
           <div class="mt-2 text-sm text-gray-500">
-            启用后会在短码末尾添加校验字符，用于验证短码完整性
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致已生成的短码格式不一致
+              </span>
+            </template>
+            <template v-else>
+              启用后会在短码末尾添加校验字符，用于验证短码完整性
+            </template>
           </div>
         </FormItem>
         <FormItem label="描述" name="description">
