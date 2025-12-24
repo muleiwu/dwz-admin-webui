@@ -47,6 +47,9 @@ const formData = reactive<CreateDomainRequest & { is_active?: boolean }>({
   is_active: true,
   random_suffix_length: 2,
   enable_checksum: true,
+  enable_xor_obfuscation: false,
+  xor_secret: '',
+  xor_rot: undefined,
 });
 
 // 表单验证规则
@@ -105,6 +108,11 @@ const columns = [
     width: 80,
   },
   {
+    title: 'XOR混淆',
+    key: 'enable_xor_obfuscation',
+    width: 100,
+  },
+  {
     title: '描述',
     dataIndex: 'description',
     width: 150,
@@ -157,6 +165,9 @@ const handleEdit = (record: Domain) => {
     is_active: record.is_active,
     random_suffix_length: record.random_suffix_length ?? 2,
     enable_checksum: record.enable_checksum ?? true,
+    enable_xor_obfuscation: record.enable_xor_obfuscation ?? false,
+    xor_secret: record.xor_secret?.toString() ?? '',
+    xor_rot: record.xor_rot ?? undefined,
   });
   modalVisible.value = true;
 };
@@ -165,11 +176,24 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate();
 
+    // 准备提交数据，清理空字符串和 undefined
+    const submitData: any = { ...formData };
+    
+    // 如果 xor_secret 是空字符串，删除该字段
+    if (submitData.xor_secret === '') {
+      delete submitData.xor_secret;
+    }
+    
+    // 如果 xor_rot 是 undefined 或 null，删除该字段
+    if (submitData.xor_rot === undefined || submitData.xor_rot === null) {
+      delete submitData.xor_rot;
+    }
+
     if (isEdit.value && currentRecord.value) {
-      await DomainApi.update(currentRecord.value.id, formData);
+      await DomainApi.update(currentRecord.value.id, submitData);
       message.success('更新成功');
     } else {
-      await DomainApi.create(formData);
+      await DomainApi.create(submitData);
       message.success('创建成功');
     }
 
@@ -217,6 +241,9 @@ const resetForm = () => {
     is_active: true,
     random_suffix_length: 2,
     enable_checksum: true,
+    enable_xor_obfuscation: false,
+    xor_secret: '',
+    xor_rot: undefined,
   });
 };
 
@@ -274,6 +301,11 @@ onMounted(() => {
           <template v-else-if="column.key === 'enable_checksum'">
             <Tag :color="record.enable_checksum ? 'green' : 'default'">
               {{ record.enable_checksum ? '启用' : '禁用' }}
+            </Tag>
+          </template>
+          <template v-else-if="column.key === 'enable_xor_obfuscation'">
+            <Tag :color="record.enable_xor_obfuscation ? 'blue' : 'default'">
+              {{ record.enable_xor_obfuscation ? '启用' : '禁用' }}
             </Tag>
           </template>
           <template v-else-if="column.key === 'actions'">
@@ -411,6 +443,77 @@ onMounted(() => {
             </template>
             <template v-else>
               启用后会在短码末尾添加校验字符，用于验证短码完整性
+            </template>
+          </div>
+        </FormItem>
+        <FormItem name="enable_xor_obfuscation">
+          <template #label>
+            <span>启用XOR混淆</span>
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致已生成的短码格式不一致'
+                  : '启用后使用位旋转和XOR运算混淆短码中的ID值，增强安全性'
+              "
+            >
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <Switch
+            v-model:checked="formData.enable_xor_obfuscation"
+            checked-children="启用"
+            un-checked-children="禁用"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致已生成的短码格式不一致
+              </span>
+            </template>
+            <template v-else>
+              启用后使用位旋转和XOR运算混淆短码中的ID值
+            </template>
+          </div>
+        </FormItem>
+        <FormItem
+          v-if="formData.enable_xor_obfuscation"
+          label="XOR密钥"
+          name="xor_secret"
+        >
+          <Input
+            v-model:value="formData.xor_secret"
+            placeholder="留空则随机生成（uint64类型）"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">编辑时不可修改</span>
+            </template>
+            <template v-else>
+              不填写时系统将自动生成随机密钥
+            </template>
+          </div>
+        </FormItem>
+        <FormItem
+          v-if="formData.enable_xor_obfuscation"
+          label="旋转位数"
+          name="xor_rot"
+        >
+          <InputNumber
+            v-model:value="formData.xor_rot"
+            :min="1"
+            :max="63"
+            placeholder="留空则随机生成（1-63）"
+            style="width: 100%"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">编辑时不可修改</span>
+            </template>
+            <template v-else>
+              不填写时系统将自动生成1-63之间的随机值
             </template>
           </div>
         </FormItem>
