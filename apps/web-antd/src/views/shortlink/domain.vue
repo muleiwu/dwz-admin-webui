@@ -178,12 +178,12 @@ const handleSubmit = async () => {
 
     // 准备提交数据，清理空字符串和 undefined
     const submitData: any = { ...formData };
-    
+
     // 如果 xor_secret 是空字符串，删除该字段
     if (submitData.xor_secret === '') {
       delete submitData.xor_secret;
     }
-    
+
     // 如果 xor_rot 是 undefined 或 null，删除该字段
     if (submitData.xor_rot === undefined || submitData.xor_rot === null) {
       delete submitData.xor_rot;
@@ -490,9 +490,7 @@ onMounted(() => {
             <template v-if="isEdit">
               <span class="text-orange-500">编辑时不可修改</span>
             </template>
-            <template v-else>
-              不填写时系统将自动生成随机密钥
-            </template>
+            <template v-else> 不填写时系统将自动生成随机密钥 </template>
           </div>
         </FormItem>
         <FormItem
@@ -512,9 +510,7 @@ onMounted(() => {
             <template v-if="isEdit">
               <span class="text-orange-500">编辑时不可修改</span>
             </template>
-            <template v-else>
-              不填写时系统将自动生成1-63之间的随机值
-            </template>
+            <template v-else> 不填写时系统将自动生成1-63之间的随机值 </template>
           </div>
         </FormItem>
         <FormItem label="描述" name="description">
