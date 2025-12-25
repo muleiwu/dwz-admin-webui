@@ -48,8 +48,7 @@ const formData = reactive<CreateDomainRequest & { is_active?: boolean }>({
   random_suffix_length: 2,
   enable_checksum: true,
   enable_xor_obfuscation: false,
-  xor_secret: '',
-  xor_rot: undefined,
+  default_start_number: 0,
 });
 
 // 表单验证规则
@@ -100,6 +99,11 @@ const columns = [
   {
     title: '随机后缀位数',
     dataIndex: 'random_suffix_length',
+    width: 120,
+  },
+  {
+    title: '默认开始数字',
+    dataIndex: 'default_start_number',
     width: 120,
   },
   {
@@ -166,8 +170,7 @@ const handleEdit = (record: Domain) => {
     random_suffix_length: record.random_suffix_length ?? 2,
     enable_checksum: record.enable_checksum ?? true,
     enable_xor_obfuscation: record.enable_xor_obfuscation ?? false,
-    xor_secret: record.xor_secret?.toString() ?? '',
-    xor_rot: record.xor_rot ?? undefined,
+    default_start_number: record.default_start_number ?? 0,
   });
   modalVisible.value = true;
 };
@@ -176,18 +179,8 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate();
 
-    // 准备提交数据，清理空字符串和 undefined
+    // 准备提交数据
     const submitData: any = { ...formData };
-
-    // 如果 xor_secret 是空字符串，删除该字段
-    if (submitData.xor_secret === '') {
-      delete submitData.xor_secret;
-    }
-
-    // 如果 xor_rot 是 undefined 或 null，删除该字段
-    if (submitData.xor_rot === undefined || submitData.xor_rot === null) {
-      delete submitData.xor_rot;
-    }
 
     if (isEdit.value && currentRecord.value) {
       await DomainApi.update(currentRecord.value.id, submitData);
@@ -242,8 +235,7 @@ const resetForm = () => {
     random_suffix_length: 2,
     enable_checksum: true,
     enable_xor_obfuscation: false,
-    xor_secret: '',
-    xor_rot: undefined,
+    default_start_number: 0,
   });
 };
 
@@ -416,6 +408,37 @@ onMounted(() => {
             </template>
           </div>
         </FormItem>
+        <FormItem name="default_start_number">
+          <template #label>
+            <span>默认开始数字</span>
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致短码生成不连续'
+                  : '设置短码ID生成的起始值，0表示从1开始'
+              "
+            >
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <InputNumber
+            v-model:value="formData.default_start_number"
+            :min="0"
+            placeholder="0表示从1开始"
+            style="width: 100%"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致短码生成不连续
+              </span>
+            </template>
+            <template v-else>
+              设置短码ID生成的起始值，0表示使用默认行为（从1开始）
+            </template>
+          </div>
+        </FormItem>
         <FormItem name="enable_checksum">
           <template #label>
             <span>启用校验位</span>
@@ -474,43 +497,6 @@ onMounted(() => {
             <template v-else>
               启用后使用位旋转和XOR运算混淆短码中的ID值
             </template>
-          </div>
-        </FormItem>
-        <FormItem
-          v-if="formData.enable_xor_obfuscation"
-          label="XOR密钥"
-          name="xor_secret"
-        >
-          <Input
-            v-model:value="formData.xor_secret"
-            placeholder="留空则随机生成（uint64类型）"
-            :disabled="isEdit"
-          />
-          <div class="mt-2 text-sm text-gray-500">
-            <template v-if="isEdit">
-              <span class="text-orange-500">编辑时不可修改</span>
-            </template>
-            <template v-else> 不填写时系统将自动生成随机密钥 </template>
-          </div>
-        </FormItem>
-        <FormItem
-          v-if="formData.enable_xor_obfuscation"
-          label="旋转位数"
-          name="xor_rot"
-        >
-          <InputNumber
-            v-model:value="formData.xor_rot"
-            :min="1"
-            :max="63"
-            placeholder="留空则随机生成（1-63）"
-            style="width: 100%"
-            :disabled="isEdit"
-          />
-          <div class="mt-2 text-sm text-gray-500">
-            <template v-if="isEdit">
-              <span class="text-orange-500">编辑时不可修改</span>
-            </template>
-            <template v-else> 不填写时系统将自动生成1-63之间的随机值 </template>
           </div>
         </FormItem>
         <FormItem label="描述" name="description">

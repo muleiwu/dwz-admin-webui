@@ -81,6 +81,7 @@ export interface Domain {
   enable_xor_obfuscation: boolean;
   xor_secret: string;
   xor_rot: number;
+  default_start_number: number;
   created_at: string;
   updated_at: string;
 }
@@ -99,6 +100,7 @@ export interface CreateDomainRequest {
   enable_xor_obfuscation?: boolean;
   xor_secret?: string;
   xor_rot?: number;
+  default_start_number?: number;
 }
 
 export interface UpdateDomainRequest {
@@ -114,6 +116,7 @@ export interface UpdateDomainRequest {
   enable_xor_obfuscation?: boolean;
   xor_secret?: string;
   xor_rot?: number;
+  default_start_number?: number;
 }
 
 export interface UpdateStatusDomainRequest {
