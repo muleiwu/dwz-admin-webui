@@ -35,6 +35,10 @@ export interface UpdateShortLinkRequest {
   is_active?: boolean;
 }
 
+export interface UpdateShortLinkStatusRequest {
+  is_active: boolean;
+}
+
 export interface ShortLinkListResponse {
   list: ShortLink[];
   total: number;
@@ -157,6 +161,11 @@ export namespace ShortLinkApi {
   // 删除短网址
   export function remove(id: number) {
     return requestClient.delete(`/api/v1/short_links/${id}`);
+  }
+
+  // 更新短网址状态
+  export function updateStatus(id: number, data: { is_active: boolean }) {
+    return requestClient.put<ShortLink>(`/api/v1/short_links/${id}/status`, data);
   }
 
   // 批量创建短网址

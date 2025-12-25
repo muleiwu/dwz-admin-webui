@@ -203,6 +203,12 @@ const handleCancel = () => {
 };
 
 const handleDelete = async (record: Domain) => {
+  // 检查是否处于活跃状态，如果是则提示先禁用
+  if (record.is_active) {
+    message.warning('请先禁用域名后再删除');
+    return;
+  }
+  
   try {
     await DomainApi.remove(record.id);
     message.success('删除成功');
@@ -309,7 +315,19 @@ onMounted(() => {
               >
                 编辑
               </Button>
+              <!-- 如果域名处于活跃状态，点击删除时显示提示 -->
+              <Button
+                v-if="record.is_active"
+                size="small"
+                type="link"
+                danger
+                @click="handleDelete(record as Domain)"
+              >
+                删除
+              </Button>
+              <!-- 如果域名已禁用，显示确认对话框 -->
               <Popconfirm
+                v-else
                 title="确定要删除这个域名配置吗？"
                 @confirm="handleDelete(record as Domain)"
               >
