@@ -208,7 +208,7 @@ const handleDelete = async (record: Domain) => {
     message.warning('请先禁用域名后再删除');
     return;
   }
-  
+
   try {
     await DomainApi.remove(record.id);
     message.success('删除成功');

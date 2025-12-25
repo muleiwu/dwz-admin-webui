@@ -32,6 +32,7 @@ import {
 import dayjs from 'dayjs';
 
 import { DomainApi, ShortLinkApi } from '#/api';
+
 import QRCodeGenerator from '../../components/QRCodeGenerator/index.vue';
 
 // 响应式数据
@@ -295,7 +296,7 @@ const handleDelete = async (record: ShortLink) => {
     message.warning('请先禁用短网址后再删除');
     return;
   }
-  
+
   try {
     await ShortLinkApi.remove(record.id);
     message.success('删除成功');

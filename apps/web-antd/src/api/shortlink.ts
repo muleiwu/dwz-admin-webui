@@ -165,7 +165,10 @@ export namespace ShortLinkApi {
 
   // 更新短网址状态
   export function updateStatus(id: number, data: { is_active: boolean }) {
-    return requestClient.put<ShortLink>(`/api/v1/short_links/${id}/status`, data);
+    return requestClient.put<ShortLink>(
+      `/api/v1/short_links/${id}/status`,
+      data,
+    );
   }
 
   // 批量创建短网址
