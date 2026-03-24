@@ -56,6 +56,7 @@ export {
   Search,
   SearchX,
   Settings,
+  ShieldCheck,
   Shrink,
   Square,
   SquareCheckBig,

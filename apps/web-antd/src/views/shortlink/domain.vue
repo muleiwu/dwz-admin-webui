@@ -11,6 +11,7 @@ import {
   Form,
   FormItem,
   Input,
+  InputNumber,
   message,
   Modal,
   Popconfirm,
@@ -20,6 +21,7 @@ import {
   Table,
   Tag,
   Textarea,
+  Tooltip,
 } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
@@ -44,6 +46,10 @@ const formData = reactive<CreateDomainRequest & { is_active?: boolean }>({
   enable_anti_red: false,
   description: '',
   is_active: true,
+  random_suffix_length: 2,
+  enable_checksum: true,
+  enable_xor_obfuscation: false,
+  default_start_number: 0,
 });
 
 // 表单验证规则
@@ -89,6 +95,26 @@ const columns = [
   {
     title: '查询参数',
     key: 'pass_query_params',
+    width: 100,
+  },
+  {
+    title: '随机后缀位数',
+    dataIndex: 'random_suffix_length',
+    width: 120,
+  },
+  {
+    title: '默认开始数字',
+    dataIndex: 'default_start_number',
+    width: 120,
+  },
+  {
+    title: '校验位',
+    key: 'enable_checksum',
+    width: 80,
+  },
+  {
+    title: 'XOR混淆',
+    key: 'enable_xor_obfuscation',
     width: 100,
   },
   {
@@ -148,6 +174,10 @@ const handleEdit = (record: Domain) => {
     enable_anti_red: record.enable_anti_red,
     description: record.description,
     is_active: record.is_active,
+    random_suffix_length: record.random_suffix_length ?? 2,
+    enable_checksum: record.enable_checksum ?? true,
+    enable_xor_obfuscation: record.enable_xor_obfuscation ?? false,
+    default_start_number: record.default_start_number ?? 0,
   });
   modalVisible.value = true;
 };
@@ -156,11 +186,14 @@ const handleSubmit = async () => {
   try {
     await formRef.value.validate();
 
+    // 准备提交数据
+    const submitData: any = { ...formData };
+
     if (isEdit.value && currentRecord.value) {
-      await DomainApi.update(currentRecord.value.id, formData);
+      await DomainApi.update(currentRecord.value.id, submitData);
       message.success('更新成功');
     } else {
-      await DomainApi.create(formData);
+      await DomainApi.create(submitData);
       message.success('创建成功');
     }
 
@@ -177,6 +210,12 @@ const handleCancel = () => {
 };
 
 const handleDelete = async (record: Domain) => {
+  // 检查是否处于活跃状态，如果是则提示先禁用
+  if (record.is_active) {
+    message.warning('请先禁用域名后再删除');
+    return;
+  }
+
   try {
     await DomainApi.remove(record.id);
     message.success('删除成功');
@@ -207,6 +246,10 @@ const resetForm = () => {
     enable_anti_red: false,
     description: '',
     is_active: true,
+    random_suffix_length: 2,
+    enable_checksum: true,
+    enable_xor_obfuscation: false,
+    default_start_number: 0,
   });
 };
 
@@ -261,6 +304,16 @@ onMounted(() => {
               {{ record.pass_query_params ? '透传' : '不透传' }}
             </Tag>
           </template>
+          <template v-else-if="column.key === 'enable_checksum'">
+            <Tag :color="record.enable_checksum ? 'green' : 'default'">
+              {{ record.enable_checksum ? '启用' : '禁用' }}
+            </Tag>
+          </template>
+          <template v-else-if="column.key === 'enable_xor_obfuscation'">
+            <Tag :color="record.enable_xor_obfuscation ? 'blue' : 'default'">
+              {{ record.enable_xor_obfuscation ? '启用' : '禁用' }}
+            </Tag>
+          </template>
           <template v-else-if="column.key === 'enable_anti_red'">
             <Tag :color="record.enable_anti_red ? 'green' : 'default'">
               {{ record.enable_anti_red ? '开启' : '关闭' }}
@@ -275,7 +328,19 @@ onMounted(() => {
               >
                 编辑
               </Button>
+              <!-- 如果域名处于活跃状态，点击删除时显示提示 -->
+              <Button
+                v-if="record.is_active"
+                size="small"
+                type="link"
+                danger
+                @click="handleDelete(record as Domain)"
+              >
+                删除
+              </Button>
+              <!-- 如果域名已禁用，显示确认对话框 -->
               <Popconfirm
+                v-else
                 title="确定要删除这个域名配置吗？"
                 @confirm="handleDelete(record as Domain)"
               >
@@ -340,6 +405,129 @@ onMounted(() => {
           />
           <div class="mt-2 text-sm text-gray-500">
             启用后，跳转时会将短网址的查询参数透传给原始URL
+          </div>
+        </FormItem>
+        <FormItem name="random_suffix_length">
+          <template #label>
+            <span>随机后缀位数</span>
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致已生成的短码格式不一致'
+                  : '设置短码随机后缀的字符数量，0表示不添加随机后缀，范围0-10'
+              "
+            >
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <InputNumber
+            v-model:value="formData.random_suffix_length"
+            :min="0"
+            :max="10"
+            placeholder="0-10，默认2"
+            style="width: 100%"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致已生成的短码格式不一致
+              </span>
+            </template>
+            <template v-else>
+              设置短码随机后缀的字符数量，0表示不添加随机后缀
+            </template>
+          </div>
+        </FormItem>
+        <FormItem name="default_start_number">
+          <template #label>
+            <span>默认开始数字</span>
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致短码生成不连续'
+                  : '设置短码ID生成的起始值，0表示从1开始'
+              "
+            >
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <InputNumber
+            v-model:value="formData.default_start_number"
+            :min="0"
+            placeholder="0表示从1开始"
+            style="width: 100%"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致短码生成不连续
+              </span>
+            </template>
+            <template v-else>
+              设置短码ID生成的起始值，0表示使用默认行为（从1开始）
+            </template>
+          </div>
+        </FormItem>
+        <FormItem name="enable_checksum">
+          <template #label>
+            <span>启用校验位</span>
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致已生成的短码格式不一致'
+                  : '启用后会在短码末尾添加校验字符，用于验证短码完整性'
+              "
+            >
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <Switch
+            v-model:checked="formData.enable_checksum"
+            checked-children="启用"
+            un-checked-children="禁用"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致已生成的短码格式不一致
+              </span>
+            </template>
+            <template v-else>
+              启用后会在短码末尾添加校验字符，用于验证短码完整性
+            </template>
+          </div>
+        </FormItem>
+        <FormItem name="enable_xor_obfuscation">
+          <template #label>
+            <span>启用XOR混淆</span>
+            <Tooltip
+              :title="
+                isEdit
+                  ? '编辑时不可修改，修改后会导致已生成的短码格式不一致'
+                  : '启用后使用位旋转和XOR运算混淆短码中的ID值，增强安全性'
+              "
+            >
+              <span class="ml-1 cursor-help text-gray-400">ⓘ</span>
+            </Tooltip>
+          </template>
+          <Switch
+            v-model:checked="formData.enable_xor_obfuscation"
+            checked-children="启用"
+            un-checked-children="禁用"
+            :disabled="isEdit"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            <template v-if="isEdit">
+              <span class="text-orange-500">
+                编辑时不可修改此配置，修改后会导致已生成的短码格式不一致
+              </span>
+            </template>
+            <template v-else>
+              启用后使用位旋转和XOR运算混淆短码中的ID值
+            </template>
           </div>
         </FormItem>
         <FormItem label="防红策略" name="enable_anti_red">

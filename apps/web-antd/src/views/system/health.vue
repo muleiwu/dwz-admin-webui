@@ -92,6 +92,7 @@ const checkHealth = async () => {
     healthStatus.value = {
       status: 'error',
       database: 'error',
+      database_driver: 'unknown',
       redis: 'error',
       timestamp: new Date().toISOString(),
     };
@@ -336,6 +337,31 @@ onUnmounted(() => {
       </div>
     </Card>
 
+    <!-- 版本信息 -->
+    <Card
+      v-if="healthResponse?.version"
+      class="mb-4"
+      title="版本信息"
+    >
+      <Descriptions :column="1" bordered size="small">
+        <DescriptionsItem label="版本号">
+          <Tag color="blue" class="font-mono">
+            {{ healthResponse.version.version }}
+          </Tag>
+        </DescriptionsItem>
+        <DescriptionsItem label="Git 提交">
+          <span class="font-mono text-xs">
+            {{ healthResponse.version.git_commit }}
+          </span>
+        </DescriptionsItem>
+        <DescriptionsItem label="构建时间">
+          <span class="text-sm">
+            {{ healthResponse.version.build_time }}
+          </span>
+        </DescriptionsItem>
+      </Descriptions>
+    </Card>
+
     <!-- 响应时间信息 -->
     <Card class="mb-4" title="性能指标">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -429,6 +455,33 @@ onUnmounted(() => {
             </Tag>
           </DescriptionsItem>
         </Descriptions>
+
+        <!-- 版本信息区域（在详细信息中） -->
+        <div v-if="healthResponse?.version" class="mt-6">
+          <h4 class="mb-3 text-lg font-medium">版本信息</h4>
+          <div class="rounded-lg border p-4">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div>
+                <div class="text-xs text-gray-500 mb-1">版本号</div>
+                <div class="font-medium text-blue-600">
+                  {{ healthResponse.version.version }}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 mb-1">Git 提交</div>
+                <div class="font-mono text-xs text-gray-700">
+                  {{ healthResponse.version.git_commit }}
+                </div>
+              </div>
+              <div>
+                <div class="text-xs text-gray-500 mb-1">构建时间</div>
+                <div class="text-sm text-gray-700">
+                  {{ healthResponse.version.build_time }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- 健康状态历史趋势 -->
         <div class="mt-6" v-if="healthHistory.length > 0">

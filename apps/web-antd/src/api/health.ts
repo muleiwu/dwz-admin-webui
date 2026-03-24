@@ -3,9 +3,16 @@ import { requestClient } from './request';
 /**
  * 健康检查相关类型定义
  */
+export interface VersionInfo {
+  version: string;
+  git_commit: string;
+  build_time: string;
+}
+
 export interface HealthStatus {
   status: string;
   timestamp: number;
+  version?: VersionInfo;
   services: {
     database: {
       status: string;

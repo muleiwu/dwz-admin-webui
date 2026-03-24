@@ -11,7 +11,7 @@ export interface ShortLink {
   original_url: string;
   title?: string;
   description?: string;
-  expire_at?: string | null;
+  expire_at?: null | string;
   is_active: boolean;
   click_count: number;
   created_at: string;
@@ -24,15 +24,19 @@ export interface CreateShortLinkRequest {
   custom_code?: string;
   title?: string;
   description?: string;
-  expire_at?: string | null;
+  expire_at?: null | string;
 }
 
 export interface UpdateShortLinkRequest {
   original_url?: string;
   title?: string;
   description?: string;
-  expire_at?: string | null;
+  expire_at?: null | string;
   is_active?: boolean;
+}
+
+export interface UpdateShortLinkStatusRequest {
+  is_active: boolean;
 }
 
 export interface ShortLinkListResponse {
@@ -50,8 +54,8 @@ export interface BatchCreateRequest {
 export interface BatchCreateResponse {
   success: ShortLink[];
   failed: Array<{
-    url: string;
     error: string;
+    url: string;
   }>;
 }
 
@@ -61,8 +65,8 @@ export interface ShortLinkStatistics {
   week_clicks: number;
   month_clicks: number;
   daily_statistics: Array<{
-    date: string;
     click_count: number;
+    date: string;
   }>;
 }
 
@@ -77,6 +81,12 @@ export interface Domain {
   pass_query_params: boolean;
   enable_anti_red: boolean;
   description?: string;
+  random_suffix_length: number;
+  enable_checksum: boolean;
+  enable_xor_obfuscation: boolean;
+  xor_secret: string;
+  xor_rot: number;
+  default_start_number: number;
   created_at: string;
   updated_at: string;
 }
@@ -91,6 +101,12 @@ export interface CreateDomainRequest {
   pass_query_params?: boolean;
   enable_anti_red: boolean;
   description?: string;
+  random_suffix_length?: number;
+  enable_checksum?: boolean;
+  enable_xor_obfuscation?: boolean;
+  xor_secret?: string;
+  xor_rot?: number;
+  default_start_number?: number;
 }
 
 export interface UpdateDomainRequest {
@@ -102,6 +118,12 @@ export interface UpdateDomainRequest {
   pass_query_params?: boolean;
   enable_anti_red?: boolean;
   description?: string;
+  random_suffix_length?: number;
+  enable_checksum?: boolean;
+  enable_xor_obfuscation?: boolean;
+  xor_secret?: string;
+  xor_rot?: number;
+  default_start_number?: number;
 }
 
 export interface UpdateStatusDomainRequest {
@@ -142,6 +164,14 @@ export namespace ShortLinkApi {
   // 删除短网址
   export function remove(id: number) {
     return requestClient.delete(`/api/v1/short_links/${id}`);
+  }
+
+  // 更新短网址状态
+  export function updateStatus(id: number, data: { is_active: boolean }) {
+    return requestClient.put<ShortLink>(
+      `/api/v1/short_links/${id}/status`,
+      data,
+    );
   }
 
   // 批量创建短网址

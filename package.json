@@ -100,8 +100,11 @@
     "overrides": {
       "@ast-grep/napi": "catalog:",
       "@ctrl/tinycolor": "catalog:",
+      "@eslint/plugin-kit": ">=0.3.4",
       "clsx": "catalog:",
       "esbuild": "0.25.3",
+      "lodash": ">=4.17.21",
+      "lodash-es": ">=4.17.21",
       "pinia": "catalog:",
       "vue": "catalog:"
     },

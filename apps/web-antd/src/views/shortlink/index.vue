@@ -32,6 +32,7 @@ import {
 import dayjs from 'dayjs';
 
 import { DomainApi, ShortLinkApi } from '#/api';
+
 import QRCodeGenerator from '../../components/QRCodeGenerator/index.vue';
 
 // 响应式数据
@@ -290,6 +291,12 @@ const handleCancel = () => {
 };
 
 const handleDelete = async (record: ShortLink) => {
+  // 检查是否处于活跃状态，如果是则提示先禁用
+  if (record.is_active) {
+    message.warning('请先禁用短网址后再删除');
+    return;
+  }
+
   try {
     await ShortLinkApi.remove(record.id);
     message.success('删除成功');
@@ -301,7 +308,7 @@ const handleDelete = async (record: ShortLink) => {
 
 const handleStatusChange = async (record: ShortLink, checked: boolean) => {
   try {
-    await ShortLinkApi.update(record.id, { is_active: checked });
+    await ShortLinkApi.updateStatus(record.id, { is_active: checked });
     message.success('状态更新成功');
     loadData();
   } catch {
@@ -478,7 +485,7 @@ onMounted(() => {
             <Switch
               :checked="record.is_active"
               @change="
-                (checked: boolean) => handleStatusChange(record as ShortLink, checked)
+                (checked) => handleStatusChange(record as ShortLink, !!checked)
               "
             />
           </template>
@@ -511,7 +518,19 @@ onMounted(() => {
               >
                 编辑
               </Button>
+              <!-- 如果短网址处于活跃状态，点击删除时显示提示 -->
+              <Button
+                v-if="record.is_active"
+                size="small"
+                type="link"
+                danger
+                @click="handleDelete(record as ShortLink)"
+              >
+                删除
+              </Button>
+              <!-- 如果短网址已禁用，显示确认对话框 -->
               <Popconfirm
+                v-else
                 title="确定要删除这个短网址吗？"
                 @confirm="handleDelete(record as ShortLink)"
               >

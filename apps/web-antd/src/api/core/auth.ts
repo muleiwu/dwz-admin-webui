@@ -12,15 +12,15 @@ export namespace AuthApi {
     token: string;
     expires_at: string;
     user: {
-      id: number;
-      username: string;
-      real_name: string;
-      email: string;
-      phone: string;
-      status: number;
-      last_login: string;
       created_at: string;
+      email: string;
+      id: number;
+      last_login: string;
+      phone: string;
+      real_name: string;
+      status: number;
       updated_at: string;
+      username: string;
     };
   }
 
@@ -28,13 +28,22 @@ export namespace AuthApi {
     data: string;
     status: number;
   }
+
+  /** 速率限制错误响应 */
+  export interface RateLimitError {
+    code: number;
+    message: string;
+    limit_type: 'ip' | 'username';
+    remaining_attempts: number;
+    lockout_seconds: number;
+  }
 }
 
 /**
  * 登录
  */
 export async function loginApi(data: AuthApi.LoginParams) {
-  return requestClient.post<AuthApi.LoginResult>('/api/v1/login', data);
+  return requestClient.post<AuthApi.LoginResult>('/api/v1/auth/login', data);
 }
 
 /**
@@ -50,7 +59,7 @@ export async function refreshTokenApi() {
  * 退出登录
  */
 export async function logoutApi() {
-  return baseRequestClient.post('/api/v1/logout');
+  return baseRequestClient.post('/api/v1/auth/logout');
 }
 
 /**
