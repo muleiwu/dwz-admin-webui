@@ -41,6 +41,7 @@ const formData = reactive<CreateDomainRequest & { is_active?: boolean }>({
   icp_number: '',
   police_number: '',
   pass_query_params: false,
+  enable_anti_red: false,
   description: '',
   is_active: true,
 });
@@ -91,6 +92,11 @@ const columns = [
     width: 100,
   },
   {
+    title: '防红',
+    key: 'enable_anti_red',
+    width: 80,
+  },
+  {
     title: '描述',
     dataIndex: 'description',
     width: 150,
@@ -139,6 +145,7 @@ const handleEdit = (record: Domain) => {
     icp_number: record.icp_number,
     police_number: record.police_number,
     pass_query_params: record.pass_query_params,
+    enable_anti_red: record.enable_anti_red,
     description: record.description,
     is_active: record.is_active,
   });
@@ -197,6 +204,7 @@ const resetForm = () => {
     icp_number: '',
     police_number: '',
     pass_query_params: false,
+    enable_anti_red: false,
     description: '',
     is_active: true,
   });
@@ -251,6 +259,11 @@ onMounted(() => {
           <template v-else-if="column.key === 'pass_query_params'">
             <Tag :color="record.pass_query_params ? 'green' : 'red'">
               {{ record.pass_query_params ? '透传' : '不透传' }}
+            </Tag>
+          </template>
+          <template v-else-if="column.key === 'enable_anti_red'">
+            <Tag :color="record.enable_anti_red ? 'green' : 'default'">
+              {{ record.enable_anti_red ? '开启' : '关闭' }}
             </Tag>
           </template>
           <template v-else-if="column.key === 'actions'">
@@ -327,6 +340,16 @@ onMounted(() => {
           />
           <div class="mt-2 text-sm text-gray-500">
             启用后，跳转时会将短网址的查询参数透传给原始URL
+          </div>
+        </FormItem>
+        <FormItem label="防红策略" name="enable_anti_red">
+          <Switch
+            v-model:checked="formData.enable_anti_red"
+            checked-children="开启"
+            un-checked-children="关闭"
+          />
+          <div class="mt-2 text-sm text-gray-500">
+            开启后，微信/QQ内置浏览器访问时将显示引导页面，提示用户在外部浏览器中打开
           </div>
         </FormItem>
         <FormItem label="描述" name="description">

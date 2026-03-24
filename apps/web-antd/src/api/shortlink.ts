@@ -75,6 +75,7 @@ export interface Domain {
   police_number?: string;
   is_active: boolean;
   pass_query_params: boolean;
+  enable_anti_red: boolean;
   description?: string;
   created_at: string;
   updated_at: string;
@@ -88,6 +89,7 @@ export interface CreateDomainRequest {
   police_number?: string;
   is_active?: boolean;
   pass_query_params?: boolean;
+  enable_anti_red: boolean;
   description?: string;
 }
 
@@ -98,6 +100,7 @@ export interface UpdateDomainRequest {
   police_number?: string;
   is_active?: boolean;
   pass_query_params?: boolean;
+  enable_anti_red?: boolean;
   description?: string;
 }
 
